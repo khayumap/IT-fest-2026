@@ -1,0 +1,11 @@
+{
+  "name": "tri-control-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TRI-CONTROL HUB - 3-in-1 Smart RC Car IT Fest Project",
+  "scripts": {
+    "dev": "node -e \"const http=require('http'),fs=require('fs'),path=require('path'),m={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png'};http.createServer((q,s)=>{let u=(q.url||'/').split('?')[0];if(u==='/')u='/index.html';const p=path.normalize(path.join(process.cwd(),'website',u));if(!p.startsWith(path.join(process.cwd(),'website'))||!fs.existsSync(p)||!fs.statSync(p).isFile()){s.writeHead(404);return s.end('Not found');}s.writeHead(200,{'Content-Type':m[path.extname(p)]||'application/octet-stream','Cache-Control':'no-cache'});fs.createReadStream(p).pipe(s);}).listen(3000,'0.0.0.0',()=>console.log('TRI-CONTROL HUB serving ./website on port 3000'));\"",
+    "build": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});fs.cpSync('website','dist',{recursive:true});\"",
+    "lint": "node -e \"const fs=require('fs'),vm=require('vm');new vm.Script(fs.readFileSync('website/script.js','utf8'));\""
+  }
+}

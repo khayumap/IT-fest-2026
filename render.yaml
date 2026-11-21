@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: tri-control-hub
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./website

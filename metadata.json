@@ -1,0 +1,5 @@
+{
+  "name": "TRI-CONTROL HUB - 3-in-1 Smart RC Car",
+  "description": "IT Fest 3-in-1 Smart RC Car controller with NodeMCU ESP8266, Arduino UNO Potentiometer Steering, Ultrasonic Radar Scanner, and LCD Dino Game.",
+  "requestFramePermissions": []
+}

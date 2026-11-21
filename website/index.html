@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRI-CONTROL HUB — 3-in-1 Smart RC Car</title>
+  <meta name="description" content="TRI-CONTROL HUB: 3-in-1 Smart RC Car web telemetry dashboard, live ultrasonic radar scanner, and hardware Dino game powered by NodeMCU ESP8266, Arduino UNO, and HC-05." />
+  <meta property="og:title" content="TRI-CONTROL HUB — 3-in-1 Smart RC Car" />
+  <meta property="og:description" content="Control Dashboard, Live Ultrasonic Radar Scanner, and Hardware Dino Game for the 3-in-1 Smart RC Car IT Fest project." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="site-header">
+      <div class="header-brand">
+        <h1 class="brand-title">TRI-CONTROL HUB</h1>
+        <p class="brand-subtitle">3-in-1 Smart RC Car</p>
+      </div>
+      <div class="header-actions">
+        <button id="btnConnectBt" class="btn btn-primary" type="button">
+          CONNECT BLUETOOTH
+        </button>
+      </div>
+    </header>
+
+    <!-- Always-Visible 4-Item Status Bar -->
+    <section class="status-bar" aria-label="System Telemetry Status">
+      <div class="status-item">
+        <span class="status-label">BLUETOOTH</span>
+        <span id="statusBt" class="status-value status-disconnected">
+          <span class="led-indicator led-red" id="statusBtLed" aria-hidden="true"></span>
+          <span id="statusBtText">DISCONNECTED</span>
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">MODE</span>
+        <span id="statusMode" class="status-value mono-accent">RC CAR</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">DISTANCE</span>
+        <span id="statusDistance" class="status-value mono-value">-- cm</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">BATTERY</span>
+        <span id="statusBattery" class="status-value mono-green">7.4V</span>
+      </div>
+    </section>
+
+    <!-- In-Page Bluetooth Alert Banner (Non-blocking alternative to window.alert) -->
+    <div id="btAlertBanner" class="alert-banner hidden" role="alert">
+      <div class="alert-content">
+        <strong id="btAlertTitle">Bluetooth Connection Notice</strong>
+        <p id="btAlertMessage"></p>
+      </div>
+      <button id="btAlertClose" class="btn-dismiss" type="button" aria-label="Close notice">Dismiss</button>
+    </div>
+
+    <!-- 3-Tab Navigation -->
+    <nav class="tab-nav" role="tablist" aria-label="TRI-CONTROL HUB Modes">
+      <button
+        id="tabBtnControl"
+        class="tab-btn active"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        data-tab="tabControl"
+        data-mode="RC CAR"
+      >
+        CONTROL DASHBOARD
+      </button>
+      <button
+        id="tabBtnRadar"
+        class="tab-btn"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        data-tab="tabRadar"
+        data-mode="RADAR"
+      >
+        RADAR SCANNER
+      </button>
+      <button
+        id="tabBtnDino"
+        class="tab-btn"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        data-tab="tabDino"
+        data-mode="DINO GAME"
+      >
+        DINO GAME
+      </button>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- ================================================================
+           TAB 1: CONTROL DASHBOARD
+           ================================================================ -->
+      <section id="tabControl" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtnControl">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Live Car Control</h2>
+            <p class="panel-note">In hardware, Pot = Steering, Joystick = Accelerator.</p>
+          </div>
+          <div class="command-readout">
+            <span class="readout-label">ACTIVE COMMAND</span>
+            <span id="activeCommandBadge" class="command-code">S</span>
+          </div>
+        </div>
+
+        <div class="control-grid">
+          <!-- Left Card: Steering Control (Potentiometer) -->
+          <div class="card steering-card">
+            <div class="card-header">
+              <label for="steeringSlider" class="card-title">STEERING - Potentiometer</label>
+              <button id="btnCenterSteer" class="btn btn-ghost" type="button">Center (512)</button>
+            </div>
+
+            <div class="steering-wheel-wrap">
+              <svg
+                id="steeringWheel"
+                class="steering-wheel-svg"
+                viewBox="0 0 160 160"
+                width="148"
+                height="148"
+                aria-label="Visual steering wheel angle"
+              >
+                <circle cx="80" cy="80" r="66" fill="none" stroke="#1e3a5f" stroke-width="12" />
+                <circle cx="80" cy="80" r="66" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="10 6" />
+                <!-- Top Center Marker -->
+                <rect x="75" y="6" width="10" height="16" rx="2" fill="#00ff88" />
+                <!-- Spokes -->
+                <line x1="20" y1="80" x2="140" y2="80" stroke="#00e5ff" stroke-width="8" stroke-linecap="round" />
+                <line x1="80" y1="80" x2="80" y2="140" stroke="#00e5ff" stroke-width="8" stroke-linecap="round" />
+                <!-- Hub -->
+                <circle cx="80" cy="80" r="20" fill="#0b1424" stroke="#00e5ff" stroke-width="3" />
+                <circle cx="80" cy="80" r="7" fill="#00ff88" />
+              </svg>
+            </div>
+
+            <div class="slider-wrap">
+              <input
+                id="steeringSlider"
+                class="steer-slider"
+                type="range"
+                min="0"
+                max="1023"
+                value="512"
+                aria-label="Steering Potentiometer 0 to 1023"
+              />
+              <div class="slider-scale">
+                <span>0 (LEFT)</span>
+                <span>512 (STRAIGHT)</span>
+                <span>1023 (RIGHT)</span>
+              </div>
+            </div>
+
+            <div class="steer-telemetry">
+              <div class="telemetry-pair">
+                <span class="meta-label">DIRECTION</span>
+                <span id="steerDirectionText" class="meta-value neon-blue">STRAIGHT</span>
+              </div>
+              <div class="telemetry-pair">
+                <span class="meta-label">ADC VALUE</span>
+                <span id="steerAdcValue" class="meta-value mono-value">512</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Card: Accelerator Control (3 Vertical Buttons + 8-Dir Display) -->
+          <div class="card accelerator-card">
+            <div class="card-header">
+              <h3 class="card-title">ACCELERATOR - Joystick Y</h3>
+              <span id="accelStateText" class="meta-value">STOP</span>
+            </div>
+
+            <div class="accelerator-stack">
+              <button id="btnForward" class="accel-btn accel-fwd" type="button">
+                <span class="accel-arrow">▲</span>
+                <span>FORWARD (F)</span>
+              </button>
+              <button id="btnStop" class="accel-btn accel-stop" type="button">
+                <span class="accel-arrow">■</span>
+                <span>STOP (S)</span>
+              </button>
+              <button id="btnBackward" class="accel-btn accel-back" type="button">
+                <span>BACKWARD (B)</span>
+                <span class="accel-arrow">▼</span>
+              </button>
+            </div>
+
+            <div class="direction-matrix" aria-label="8-Direction Differential Output">
+              <div class="matrix-header">8-Direction Combined Output</div>
+              <div class="matrix-grid">
+                <span class="dir-cell" data-cmd="FL">FL</span>
+                <span class="dir-cell" data-cmd="F">F</span>
+                <span class="dir-cell" data-cmd="FR">FR</span>
+                <span class="dir-cell" data-cmd="L">L</span>
+                <span class="dir-cell active-dir" data-cmd="S">S</span>
+                <span class="dir-cell" data-cmd="R">R</span>
+                <span class="dir-cell" data-cmd="BL">BL</span>
+                <span class="dir-cell" data-cmd="B">B</span>
+                <span class="dir-cell" data-cmd="BR">BR</span>
+              </div>
+              <p id="combinedLogicText" class="logic-formula">Steering STRAIGHT + STOP = S</p>
+            </div>
+          </div>
+
+          <!-- Right Card: Lights, Horn & Car LED Legend -->
+          <div class="card aux-card">
+            <div class="card-header">
+              <h3 class="card-title">AUXILIARY &amp; TELEMETRY</h3>
+            </div>
+
+            <div class="side-buttons">
+              <button id="btnHeadlight" class="aux-btn" type="button" aria-pressed="false">
+                <span class="aux-btn-label">Headlight ON/OFF</span>
+                <span id="headlightState" class="aux-state">OFF (D2)</span>
+              </button>
+
+              <button id="btnBacklight" class="aux-btn" type="button" aria-pressed="false">
+                <span class="aux-btn-label">Backlight ON/OFF</span>
+                <span id="backlightState" class="aux-state">OFF (D3)</span>
+              </button>
+
+              <button id="btnHorn" class="aux-btn aux-horn" type="button">
+                <span class="aux-btn-label">Horn (Bell Switch)</span>
+                <span class="aux-state">SEND O + BEEP</span>
+              </button>
+            </div>
+
+            <!-- Visual Car Light Preview -->
+            <div class="car-lights-preview">
+              <div class="light-box">
+                <span id="headlightLamp" class="lamp-dot lamp-head-off" aria-hidden="true"></span>
+                <span>Front D2 Headlight</span>
+              </div>
+              <div class="light-box">
+                <span id="backlightLamp" class="lamp-dot lamp-back-off" aria-hidden="true"></span>
+                <span>Rear D3 Backlight</span>
+              </div>
+            </div>
+
+            <!-- Car Status Legend matching NodeMCU D0 / D1 LEDs -->
+            <div class="legend-box">
+              <h4 class="legend-title">CAR STATUS LEGEND (NodeMCU)</h4>
+              <div class="legend-row">
+                <span id="legendGreenLed" class="led-indicator led-green-dim" aria-hidden="true"></span>
+                <span>Green LED (D0) = Connected</span>
+              </div>
+              <div class="legend-row">
+                <span id="legendRedLed" class="led-indicator led-red" aria-hidden="true"></span>
+                <span>Red LED (D1) = Disconnected</span>
+              </div>
+            </div>
+
+            <div class="last-cmd-log">
+              <span class="meta-label">LAST TX PACKET:</span>
+              <span id="lastTxLog" class="mono-value">S (Ready)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           TAB 2: RADAR SCANNER
+           ================================================================ -->
+      <section id="tabRadar" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnRadar" hidden>
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Live Radar Scanner</h2>
+            <p class="panel-note">Radar beep sound comes from Joystick Speaker, not from website.</p>
+          </div>
+          <div class="radar-actions">
+            <button id="btnSimulateObstacle" class="btn btn-green" type="button">
+              Simulate Obstacle (Demo)
+            </button>
+            <button id="btnClearRadar" class="btn btn-ghost" type="button">
+              Clear Targets
+            </button>
+          </div>
+        </div>
+
+        <div class="radar-layout">
+          <div class="card radar-stage-card">
+            <div class="radar-circle" id="radarCircle" aria-label="Ultrasonic 360 degree radar display">
+              <div class="radar-ring ring-outer"></div>
+              <div class="radar-ring ring-mid"></div>
+              <div class="radar-ring ring-inner"></div>
+              <div class="radar-axis axis-x"></div>
+              <div class="radar-axis axis-y"></div>
+              <div class="radar-sweep"></div>
+              <div class="radar-center-dot"></div>
+              <div id="radarTargetsLayer" class="radar-targets"></div>
+            </div>
+          </div>
+
+          <div class="card radar-info-card">
+            <h3 class="card-title">TARGET TELEMETRY</h3>
+            <p id="radarReadout" class="radar-readout-primary">
+              Distance: -- cm | Direction: Waiting for sweep...
+            </p>
+
+            <div class="radar-metrics-grid">
+              <div class="metric-tile">
+                <span class="meta-label">RANGE</span>
+                <span id="radarDistVal" class="metric-big mono-green">-- cm</span>
+              </div>
+              <div class="metric-tile">
+                <span class="meta-label">BEARING</span>
+                <span id="radarAngleVal" class="metric-big neon-blue">--°</span>
+              </div>
+              <div class="metric-tile">
+                <span class="meta-label">ALERT ZONE</span>
+                <span id="radarZoneVal" class="metric-big">IDLE</span>
+              </div>
+            </div>
+
+            <div class="sonar-thresholds">
+              <h4 class="legend-title">HARDWARE SONAR BEEP INTERVALS (D6)</h4>
+              <ul class="threshold-list">
+                <li><span>&gt; 30 cm</span><span class="zone-safe">SAFE · 1000ms Slow</span></li>
+                <li><span>15 – 30 cm</span><span class="zone-warn">WARNING · 500ms Medium</span></li>
+                <li><span>10 – 15 cm</span><span class="zone-danger">DANGER! · 200ms Fast</span></li>
+                <li><span>&lt; 10 cm</span><span class="zone-stop">STOP!! · 100ms Very Fast</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           TAB 3: DINO GAME
+           ================================================================ -->
+      <section id="tabDino" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnDino" hidden>
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Dino Game</h2>
+            <p class="panel-note">In hardware, Jump uses Bell Switch, not Joystick button.</p>
+          </div>
+          <div class="score-strip">
+            <div class="score-box">
+              <span class="meta-label">SCORE</span>
+              <span id="dinoScore" class="score-val mono-green">0</span>
+            </div>
+            <div class="score-box">
+              <span class="meta-label">HIGH SCORE</span>
+              <span id="dinoHighScore" class="score-val neon-blue">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card dino-card">
+          <div class="canvas-wrapper">
+            <canvas id="dinoCanvas" width="600" height="200"></canvas>
+          </div>
+
+          <div class="dino-controls">
+            <button id="btnDinoJump" class="btn btn-green btn-lg" type="button">
+              JUMP (Spacebar)
+            </button>
+            <button id="btnDinoRestart" class="btn btn-primary btn-lg hidden" type="button">
+              Restart Game
+            </button>
+          </div>
+          <p class="dino-hint">Press <strong>Spacebar</strong> or tap <strong>JUMP</strong> to leap over cacti (+10 per cactus cleared).</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <p>TRI-CONTROL HUB &bull; IT Fest Project &bull; NodeMCU + Arduino UNO + HC-05</p>
+    </footer>
+  </div>
+
+  <script src="./script.js" defer></script>
+</body>
+</html>
